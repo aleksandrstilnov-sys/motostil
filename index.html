@@ -1681,13 +1681,22 @@ function renderGrid(animate) {
   else if (state.sort === 'desc') list.sort((a, b) => b.price - a.price);
   else list.sort((a, b) => (!!b.img - !!a.img) || b.pop - a.pop);
   $('#found').textContent = `${list.length} ${plural(list.length, 'модель', 'модели', 'моделей')}`;
-  if (!list.length) { $('#grid').innerHTML = `<div class="empty"><b>Ничего не нашли</b>Попробуйте другое название или выберите «Все».</div>`; return; }
+  if (!list.length) {
+    const worldEmpty = !P.some(p => p.world === state.world);
+    const tel = CONFIG.phone.replace(/[^\d+]/g, '');
+    $('#grid').innerHTML = worldEmpty
+      ? `<div class="empty"><b>${state.world === 'velo' ? 'Велосипеды и электротранспорт скоро появятся в каталоге' : 'Каталог скоро пополнится'}</b>
+          Наличие уточните у нас — подберём модель и расскажем о сроках.<br><br>
+          <a class="btn" href="tel:${tel}">Позвонить ${CONFIG.phone}</a> <a class="btn btn-dark" href="${CONFIG.vkChat}" target="_blank" rel="noopener" style="margin-left:6px">Написать в VK</a></div>`
+      : `<div class="empty"><b>Ничего не нашли</b>Попробуйте другое название или выберите «Все».</div>`;
+    return;
+  }
   $('#grid').innerHTML = list.map(p => {
     const sale = p.old ? Math.round((1 - p.price / p.old) * 100) : 0;
     const ic = inCart(p.id);
     return `<article class="card" data-spotlight="card">
       <button class="card-art" type="button" data-open="${p.id}" aria-label="Подробнее: ${p.name}">${art(p)}
-        <span class="badges">${p.badge ? `<span class="badge">${p.badge}</span>` : ''}${sale ? `<span class="badge sale">−${sale}%</span>` : ''}</span></button>
+        <span class="badges">${p.badge ? `<span class="badge">${p.badge}</span>` : ''}${sale ? `<span class="badge sale">−${sale}%</span>` : ''}${p.stock === 'order' ? '<span class="badge">Под заказ</span>' : ''}</span></button>
       ${favBtn(p)}${cmpBtn(p)}
       <div class="card-body">
         <span class="card-cat">${catName(p)}</span>
@@ -1905,7 +1914,7 @@ function openProduct(id) {
       <table class="spec-table"><tbody>${Object.entries(p.specs).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
       <div class="pd-buy"><div class="qty"><button type="button" id="pdDec" aria-label="Уменьшить">−</button><span id="pdQty">1</span><button type="button" id="pdInc" aria-label="Увеличить">+</button></div>
         <button class="btn" type="button" id="pdAdd">Добавить в корзину</button>${favBtn(p)}${cmpBtn(p)}</div>
-      <div class="pd-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>В наличии · сборка и предпродажная подготовка бесплатно</div>
+      <div class="pd-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>${p.stock === 'order' ? 'Под заказ — срок поставки уточнит менеджер' : 'В наличии'} · сборка и предпродажная подготовка бесплатно</div>
     </div></div>`;
   $('#pdDec').onclick = () => { qty = Math.max(1, qty - 1); $('#pdQty').textContent = qty; };
   $('#pdInc').onclick = () => { qty++; $('#pdQty').textContent = qty; };
@@ -1962,16 +1971,30 @@ function openCheckout() {
       bad.focus({ preventScroll: true });
       return;
     }
-    const order = { number: 'MS-' + String(Date.now()).slice(-6), name: f.name.value.trim(), phone: phone.value, delivery: f.delivery.value, address: f.address.value.trim(), pay: f.pay.value,
-      items: state.cart.map(l => ({ id: l.id, name: byId(l.id).name, qty: l.qty, price: byId(l.id).price })), total: t };
-    console.log('Заказ:', order);
-    /* TODO: отправка заказа на сервер и оплата (ЮKassa, CloudPayments, Т-Банк).
-       fetch('/api/order', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(order) }) */
-    state.cart = []; saveCart();
-    const how = { card: 'Ссылка на оплату придёт в SMS', credit: 'Менеджер поможет оформить рассрочку', cash: 'Оплата при получении' }[order.pay];
-    $('#coBox').innerHTML = `${xBtn}<div class="done"><div class="done-ic">${icCheck}</div><h2>Заказ ${order.number} оформлен</h2>
-      <p>${order.name}, мы перезвоним на ${order.phone} в течение 15 минут, чтобы подтвердить наличие. ${how}.</p>
-      <button class="btn" type="button" data-close>Вернуться в магазин</button></div>`;
+    const order = { name: f.name.value.trim(), phone: phone.value, delivery: f.delivery.value, address: f.address.value.trim(), pay: f.pay.value,
+      items: state.cart.map(l => ({ id: l.id, qty: l.qty })), consent: true, page: location.href };
+    const btn = $('#coSubmit'), btnText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Отправляем заказ…';
+    (async () => {
+      // заказ уходит на наш сервер (в админку и Telegram); цены сервер пересчитывает сам
+      let res = null;
+      if (API) {
+        try { const r = await fetch('api/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) }); res = await r.json(); }
+        catch (err) { res = null; }
+      }
+      if (!res || !res.ok) {
+        btn.disabled = false; btn.textContent = btnText;
+        const tel = CONFIG.phone.replace(/[^\d+]/g, '');
+        $('#coErr').innerHTML = res && res.error
+          ? res.error
+          : `Сейчас не получается отправить заказ через сайт. Позвоните нам: <a href="tel:${tel}" style="color:inherit;text-decoration:underline">${CONFIG.phone}</a> или напишите <a href="${CONFIG.vkChat}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">в VK</a> — корзина сохранена.`;
+        return;
+      }
+      state.cart = []; saveCart();
+      $('#coBox').innerHTML = `${xBtn}<div class="done"><div class="done-ic">${icCheck}</div><h2>Заказ ${res.number} оформлен</h2>
+        <p>${order.name.replace(/[<>&]/g, '')}, мы получили заказ и перезвоним на ${order.phone} ${(() => { const h = (new Date().getUTCHours() + 5) % 24; return h >= 10 && h < 19 ? 'в течение 15 минут' : 'с 10:00 по Оренбургу'; })()}, чтобы подтвердить наличие и договориться об оплате и получении.</p>
+        <button class="btn" type="button" data-close>Вернуться в магазин</button></div>`;
+    })();
   });
   openLayer($('#coModal'));
 }
@@ -2087,6 +2110,7 @@ function heroSlide(i, first) {
   imgs[hxI].classList.remove('was'); imgs[hxI].classList.add('on');
   const swap = (el, html) => { el.innerHTML = html; el.classList.remove('swap'); void el.offsetWidth; if (!first) el.classList.add('swap'); };
   const name = $('#hxName'); name.textContent = p.name; name.classList.remove('swap'); void name.offsetWidth; if (!first) name.classList.add('swap');
+  fitHeroName();
   swap($('#hxText'), s.text);
   swap($('#hxSpecs'), Object.entries(p.specs).slice(0, 3).map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join(''));
   swap($('#hxPrice'), `${p.old ? `<s>${rub(p.old)}</s>` : ''}${rub(p.price)}`);
@@ -2094,7 +2118,19 @@ function heroSlide(i, first) {
   $('#hxGlow').style.backgroundColor = s.glow;
   const bar = $('#hxBar'); bar.classList.remove('run'); void bar.offsetWidth; bar.classList.add('run');
 }
+// длинное название модели не обрезаем, а уменьшаем шрифт, пока оно не поместится в строку
+function fitHeroName() {
+  const box = $('.hx-name'), span = $('#hxName');
+  box.style.fontSize = '';
+  let size = parseFloat(getComputedStyle(box).fontSize);
+  while (span.scrollWidth > box.clientWidth && size > 26) { size -= 2; box.style.fontSize = size + 'px'; }
+}
+addEventListener('resize', () => { if ($('#hxName')) fitHeroName(); });
+
 function initHero() {
+  // в слайдере только товары, которые есть в каталоге и у которых есть фото
+  for (let i = SLIDES.length - 1; i >= 0; i--) { const p = byId(SLIDES[i].id); if (!p || !p.img) SLIDES.splice(i, 1); }
+  if (!SLIDES.length) { $('.hero').hidden = true; return; }
   $('#hxFrame').innerHTML = SLIDES.map(s => { const p = byId(s.id); return `<img class="hx-slide" src="${p.img}" alt="${p.name} в салоне Мотостиль">`; }).join('');
   $('.hx-count span').textContent = '/ ' + String(SLIDES.length).padStart(2, '0');
   heroSlide(0, true);
@@ -2548,7 +2584,7 @@ function initChat() {
     input.value = ''; add(text.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])), 'me');
     $$('#chatBody .quick').forEach(q => q.remove());
     const lead = getLead();
-    if (lead && lead.sent) sendLead({ type: 'message', text, name: lead.name, phone: lead.phone, city: lead.city, page: location.href });
+    if (lead && lead.sent) sendLead({ type: 'message', text, name: lead.name, phone: lead.phone, city: lead.city, consent: true, page: location.href });
     const key = guess(text);
     if (key) { answer(key); return; }
     if (lead && lead.sent) { say('Передал ваш вопрос менеджеру — он ответит вам по телефону ' + esc(lead.phone) + (online ? ' в ближайшее время.' : ' с 10:00.') + ' Если удобнее, напишите и в мессенджер:', contactBtns()); return; }
@@ -2581,22 +2617,52 @@ function initChat() {
   if (!document.documentElement.classList.contains('js-loading')) chatArm();
 }
 
-applyConfig();
-initLoader();
-initChat();
-initBrush();
-initIntro();
-initSpotlights();
-initHero();
-initTapes();
-initMotion();
-$('#year').textContent = new Date().getFullYear();
-setWorld(state.world);
-renderCart();
-renderFav();
-renderCmpBar();
-renderPicker();
-initReveals();
+/* ============ КАТАЛОГ С СЕРВЕРА ============
+   Если сайт открыт через наш сервер — товары, цены и наличие берутся из админки
+   (и из МойСклада). Если сервера нет (например, GitHub Pages) — работает встроенный каталог выше. */
+let API = false;
+async function fetchJson(url, ms = 3500) {
+  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), ms);
+  try { const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' }); return r.ok ? await r.json() : null; }
+  catch (e) { return null; } finally { clearTimeout(timer); }
+}
+async function loadCatalog() {
+  if (location.protocol === 'file:') return;
+  try {
+    // 1) живой каталог с нашего сервера; 2) выгрузка каталога (catalog.json) — для демо-версии без сервера
+    let j = await fetchJson('api/catalog');
+    if (j && j.ok && Array.isArray(j.products)) { API = true; CONFIG.leadEndpoint = 'api/lead'; }
+    else j = await fetchJson('catalog.json');
+    if (!j || !Array.isArray(j.products) || !j.products.length) return;
+    P.splice(0, P.length, ...j.products);
+    const heroes = j.products.filter(p => p.hero && p.img);
+    const pool = heroes.length ? heroes : j.products.filter(p => p.img).slice(0, 4);
+    SLIDES.splice(0, SLIDES.length, ...pool.slice(0, 6).map(p => ({ id: p.id, glow: p.glow || '#FF7A1F', text: p.heroText || p.desc })));
+    state.cart = state.cart.filter(l => byId(l.id));
+    state.fav = state.fav.filter(id => byId(id));
+    state.cmp = state.cmp.filter(id => byId(id));
+  } catch (e) { /* сервер недоступен — остаёмся на встроенном каталоге */ }
+}
+
+(async () => {
+  await loadCatalog();
+  applyConfig();
+  initLoader();
+  initChat();
+  initBrush();
+  initIntro();
+  initSpotlights();
+  initHero();
+  initTapes();
+  initMotion();
+  $('#year').textContent = new Date().getFullYear();
+  setWorld(state.world);
+  renderCart();
+  renderFav();
+  renderCmpBar();
+  renderPicker();
+  initReveals();
+})();
 </script>
 </body>
 </html>
