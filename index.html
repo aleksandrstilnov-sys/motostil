@@ -439,7 +439,8 @@ footer { background: #0E0F11; color: #8E939B; padding: 64px 0 28px; position: re
 }
 /* галерея: фото целиком (не обрезаем), остаётся на месте при прокрутке характеристик */
 .pd-gal { position: sticky; top: 0; padding: 20px; display: grid; gap: 12px; }
-.g-main { position: relative; aspect-ratio: 4 / 3; border-radius: var(--r-md); overflow: hidden; background: var(--art-bg); touch-action: pan-y; user-select: none; cursor: grab; transition: background-color .4s; }
+/* фото не выше экрана (минус миниатюры и отступы) — галерея целиком видна даже на низких экранах */
+.g-main { position: relative; aspect-ratio: 4 / 3; max-height: calc(100vh - 190px); max-height: calc(100svh - 190px); min-height: 220px; border-radius: var(--r-md); overflow: hidden; background: var(--art-bg); touch-action: pan-y; user-select: none; cursor: grab; transition: background-color .4s; }
 .g-main:active { cursor: grabbing; }
 .g-main.g-empty { display: grid; place-items: center; cursor: default; }
 .g-main.g-empty svg { width: 100%; padding: 30px; }
@@ -463,6 +464,25 @@ footer { background: #0E0F11; color: #8E939B; padding: 64px 0 28px; position: re
 .pd-desc p { margin: 0 0 10px; color: var(--muted); line-height: 1.6; }
 .pd-more { border: 0; background: none; color: var(--orange); font-weight: 700; font-size: 14px; padding: 8px 0 0; }
 .pd-more:hover { text-decoration: underline; }
+.g-main { cursor: zoom-in; }
+.g-zoom { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; align-items: center; background: rgba(20,21,24,.6); color: #fff; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px; backdrop-filter: blur(6px); pointer-events: none; }
+.g-zoom svg { width: 14px; height: 14px; }
+
+/* полноэкранный просмотр фото с приближением */
+.lb { position: fixed; inset: 0; z-index: 95; background: rgba(8,9,10,.96); display: grid; place-items: center; touch-action: none; user-select: none; }
+.lb-stage { position: absolute; inset: 0; overflow: hidden; display: grid; place-items: center; cursor: zoom-in; }
+.lb-stage.zoomed { cursor: grab; }
+.lb-stage.dragging { cursor: grabbing; }
+.lb-img { max-width: 94vw; max-height: 86vh; object-fit: contain; transform-origin: 0 0; will-change: transform; pointer-events: none; transition: transform .25s var(--ease); }
+.lb-img.instant { transition: none; }
+.lb-x, .lb-nav { position: absolute; border: 0; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; display: grid; place-items: center; z-index: 2; transition: background-color .2s; }
+.lb-x { top: 16px; right: 16px; width: 48px; height: 48px; font-size: 26px; line-height: 1; }
+.lb-nav { top: 50%; transform: translateY(-50%); width: 56px; height: 56px; font-size: 34px; line-height: 1; padding-bottom: 4px; }
+.lb-x:hover, .lb-nav:hover { background: var(--orange); color: var(--black); }
+.lb-prev { left: 16px; } .lb-next { right: 16px; }
+.lb-bar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; gap: 14px; align-items: center; color: #fff; font-size: 13px; font-weight: 600; background: rgba(255,255,255,.1); padding: 8px 16px; border-radius: 999px; white-space: nowrap; }
+.lb-bar span { color: #A9ADB4; }
+@media (max-width: 760px) { .lb-nav { width: 44px; height: 44px; font-size: 28px; } .lb-bar span { display: none; } .lb-img { max-width: 100vw; max-height: 78vh; } }
 @media (max-width: 960px) { .pd-gal { position: static; padding: 14px 14px 0; } .pd-info { padding: 20px; } .g-nav { opacity: 1; width: 40px; height: 40px; } }
 .pd-info h2 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1.08; letter-spacing: -.02em; margin: 0; padding-right: 40px; }
 .pd-price { font-family: var(--display); font-weight: 800; font-size: 32px; letter-spacing: -.02em; }
@@ -1465,6 +1485,15 @@ html[data-world="moto"] [data-spotlight="chip"] .spotlight {
 </aside>
 <div class="modal" id="pModal" role="dialog" aria-modal="true" aria-label="Карточка товара"><div class="modal-bg" data-close></div><div class="modal-box" id="pBox"></div></div>
 <div class="modal" id="coModal" role="dialog" aria-modal="true" aria-label="Оформление заказа"><div class="modal-bg" data-close></div><div class="modal-box" id="coBox"></div></div>
+<!-- Полноэкранный просмотр фото -->
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Просмотр фото" hidden>
+  <div class="lb-stage" id="lbStage"><img class="lb-img" id="lbImg" alt=""></div>
+  <button class="lb-x" type="button" id="lbX" aria-label="Закрыть просмотр">×</button>
+  <button class="lb-nav lb-prev" type="button" id="lbPrev" aria-label="Предыдущее фото">‹</button>
+  <button class="lb-nav lb-next" type="button" id="lbNext" aria-label="Следующее фото">›</button>
+  <div class="lb-bar"><b id="lbCount">1 / 1</b><span>Нажмите или прокрутите колесо, чтобы приблизить · Esc — закрыть</span></div>
+</div>
+
 <!-- Сравнение -->
 <div class="modal" id="cmpModal" role="dialog" aria-modal="true" aria-label="Сравнение товаров"><div class="modal-bg" data-close></div><div class="modal-box cmp-box" id="cmpBox"></div></div>
 <div class="cmp-bar" id="cmpBar" aria-live="polite">
@@ -1958,6 +1987,7 @@ function openProduct(id) {
     ? `<div class="g-main" tabindex="0" aria-roledescription="галерея" aria-label="Фото ${escHtml(p.name)}">
          <div class="g-track">${photos.map((u, i) => `<div class="g-slide"><img src="${escHtml(u)}" alt="${escHtml(p.name)} — фото ${i + 1}" ${i ? 'loading="lazy"' : ''} draggable="false"></div>`).join('')}</div>
          ${photos.length > 1 ? `<button class="g-nav g-prev" type="button" aria-label="Предыдущее фото">‹</button><button class="g-nav g-next" type="button" aria-label="Следующее фото">›</button><span class="g-count"><b>1</b> / ${photos.length}</span>` : ''}
+         <span class="g-zoom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4M11 8v6M8 11h6"/></svg>Увеличить</span>
        </div>
        ${photos.length > 1 ? `<div class="g-thumbs">${photos.map((u, i) => `<button type="button" class="g-thumb ${i ? '' : 'on'}" data-i="${i}" aria-label="Фото ${i + 1}"><img src="${escHtml(u)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}`
     : `<div class="g-main g-empty">${art(p).replace(/<span class="no-photo">.*?<\/span>/, '')}</div>`;
@@ -2021,7 +2051,15 @@ function initGallery(root, n) {
     if (img.complete && img.naturalWidth) apply(); else img.addEventListener('load', apply, { once: true });
   };
   tint(track.querySelector('img'));
+  // нажатие на фото (не свайп) — открыть на весь экран с приближением
+  let movedG = false;
+  main.addEventListener('click', e => {
+    if (e.target.closest('.g-nav') || movedG) return;
+    lbOpen([...track.querySelectorAll('img')].map(im => im.getAttribute('src')), i);
+  });
   if (n < 2) return;
+  main.addEventListener('pointerdown', () => { movedG = false; });
+  main.addEventListener('pointermove', e => { if (e.buttons && Math.abs(dx) > 6) movedG = true; });
   root.querySelector('.g-prev').onclick = () => go(i - 1);
   root.querySelector('.g-next').onclick = () => go(i + 1);
   root.querySelectorAll('.g-thumb').forEach(t => t.onclick = () => go(+t.dataset.i));
@@ -2032,6 +2070,92 @@ function initGallery(root, n) {
   const end = () => { if (x0 === null) return; track.style.transition = ''; const w = main.clientWidth; x0 = null; if (Math.abs(dx) > w * .15) go(i + (dx < 0 ? 1 : -1)); else go(i); };
   main.addEventListener('pointerup', end); main.addEventListener('pointerleave', end); main.addEventListener('pointercancel', end);
 }
+/* ============ ПОЛНОЭКРАННЫЙ ПРОСМОТР ФОТО ============
+   Нажатие — приблизить в это место (повторное — отдалить), колесо мыши — плавное приближение,
+   два пальца — щипок, в приближении фото можно двигать. Без приближения — свайп листает фото. */
+const LB = { list: [], i: 0, s: 1, x: 0, y: 0, ptrs: new Map(), moved: false, start: null, pinch: null };
+function lbOpen(list, i) {
+  LB.list = list; lbShow(i);
+  $('#lb').hidden = false; document.body.style.overflow = 'hidden';
+  $('#lbX').focus({ preventScroll: true });
+}
+function lbClose() {
+  $('#lb').hidden = true;
+  if (!LAYERS.some(s => $(s).classList.contains('open'))) document.body.style.overflow = '';
+}
+function lbShow(i) {
+  const n = LB.list.length; LB.i = (i + n) % n;
+  $('#lbImg').src = LB.list[LB.i];
+  lbReset(true);
+  $('#lbCount').textContent = `${LB.i + 1} / ${n}`;
+  $('#lbPrev').hidden = $('#lbNext').hidden = n < 2;
+}
+function lbApply(instant) {
+  const img = $('#lbImg');
+  img.classList.toggle('instant', !!instant);
+  img.style.transform = `translate(${LB.x}px, ${LB.y}px) scale(${LB.s})`;
+  $('#lbStage').classList.toggle('zoomed', LB.s > 1.01);
+}
+function lbReset(instant) { LB.s = 1; LB.x = 0; LB.y = 0; lbApply(instant); }
+// приблизить так, чтобы точка под курсором/пальцем осталась на месте
+function lbZoomAt(cx, cy, s, instant) {
+  s = Math.min(5, Math.max(1, s));
+  if (s === 1) return lbReset(instant);
+  const r = $('#lbImg').getBoundingClientRect(), L = r.left - LB.x, T = r.top - LB.y;
+  const px = (cx - L - LB.x) / LB.s, py = (cy - T - LB.y) / LB.s;
+  LB.x = cx - L - s * px; LB.y = cy - T - s * py; LB.s = s;
+  lbApply(instant);
+}
+(() => {
+  const st = $('#lbStage');
+  $('#lbX').onclick = lbClose;
+  $('#lbPrev').onclick = () => lbShow(LB.i - 1);
+  $('#lbNext').onclick = () => lbShow(LB.i + 1);
+  st.addEventListener('wheel', e => { e.preventDefault(); lbZoomAt(e.clientX, e.clientY, LB.s * (e.deltaY < 0 ? 1.25 : 0.8), true); }, { passive: false });
+  st.addEventListener('pointerdown', e => {
+    st.setPointerCapture(e.pointerId);
+    LB.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    LB.moved = false; LB.start = { x: e.clientX, y: e.clientY, tx: LB.x, ty: LB.y };
+    if (LB.ptrs.size === 2) { const [a, b] = [...LB.ptrs.values()]; LB.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: LB.s }; }
+  });
+  st.addEventListener('pointermove', e => {
+    if (!LB.ptrs.has(e.pointerId)) return;
+    LB.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (LB.ptrs.size === 2 && LB.pinch) {                       // щипок двумя пальцами
+      const [a, b] = [...LB.ptrs.values()];
+      lbZoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, LB.pinch.s * Math.hypot(a.x - b.x, a.y - b.y) / LB.pinch.d, true);
+      LB.moved = true; return;
+    }
+    const dx = e.clientX - LB.start.x, dy = e.clientY - LB.start.y;
+    if (Math.abs(dx) + Math.abs(dy) > 6) LB.moved = true;
+    if (LB.s > 1.01) { LB.x = LB.start.tx + dx; LB.y = LB.start.ty + dy; st.classList.add('dragging'); lbApply(true); }
+  });
+  const up = e => {
+    if (!LB.ptrs.has(e.pointerId)) return;
+    LB.ptrs.delete(e.pointerId); st.classList.remove('dragging');
+    if (LB.ptrs.size) return;
+    if (LB.pinch) { LB.pinch = null; if (LB.s < 1.05) lbReset(); return; }
+    const dx = e.clientX - LB.start.x;
+    if (!LB.moved) {                                            // простое нажатие
+      const r = $('#lbImg').getBoundingClientRect();
+      const onImg = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (LB.s > 1.01) lbReset(); else if (onImg) lbZoomAt(e.clientX, e.clientY, 2.5); else lbClose();
+    } else if (LB.s <= 1.01 && Math.abs(dx) > 60 && LB.list.length > 1) lbShow(LB.i + (dx < 0 ? 1 : -1));   // свайп
+  };
+  st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
+  // клавиши: работают раньше остальных, пока открыт просмотр
+  document.addEventListener('keydown', e => {
+    if ($('#lb').hidden) return;
+    e.stopImmediatePropagation();
+    if (e.key === 'Escape') lbClose();
+    if (e.key === 'ArrowRight') lbShow(LB.i + 1);
+    if (e.key === 'ArrowLeft') lbShow(LB.i - 1);
+    const c = $('#lbStage').getBoundingClientRect();
+    if (e.key === '+' || e.key === '=') lbZoomAt(c.width / 2, c.height / 2, LB.s * 1.25);
+    if (e.key === '-') lbZoomAt(c.width / 2, c.height / 2, LB.s * 0.8);
+  }, true);
+})();
+
 document.addEventListener('keydown', e => {
   if (!$('#pModal').classList.contains('open') || (e.target.closest && e.target.closest('input, textarea'))) return;
   const g = $('#pBox .pd-gal'); if (!g || !g.querySelector('.g-next')) return;
