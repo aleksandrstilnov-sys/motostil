@@ -281,6 +281,7 @@ html[data-world="velo"] .switch-band p { color: #A9ADB4; }
 .specs span { font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 6px; background: var(--surface-2); color: var(--muted); transition: background-color .45s; }
 .price-row { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; padding-top: 8px; }
 .price { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -.02em; line-height: 1.1; white-space: nowrap; }
+.price .on-request { font-size: 17px; line-height: 1.15; display: block; white-space: normal; }
 .price s { display: block; font-family: var(--body); font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
 .credit { font-size: 12px; color: var(--muted); font-weight: 600; }
 .add {
@@ -1615,6 +1616,7 @@ const P = [
 ];
 const byId = id => P.find(p => p.id === id);
 const rub = n => n.toLocaleString('ru-RU') + ' ₽';
+const priceText = p => p.price ? rub(p.price) : 'Цена по запросу';   // цена 0 = «по запросу»
 const perMonth = n => rub(Math.ceil(n / 12 / 10) * 10);
 const catName = p => CATS[p.world].find(c => c.id === p.cat).name;
 const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; if (m === 1 && h !== 11) return a; if (m >= 2 && m <= 4 && (h < 12 || h > 14)) return b; return c; };
@@ -1703,8 +1705,9 @@ function renderGrid(animate) {
         <h3 class="card-title"><button type="button" data-open="${p.id}">${p.name}</button></h3>
         <div class="specs">${Object.values(p.specs).slice(0, 3).map(v => `<span>${v}</span>`).join('')}</div>
         <div class="price-row">
-          <div><div class="price">${p.old ? `<s>${rub(p.old)}</s>` : ''}${rub(p.price)}</div></div>
-          <button class="add ${ic ? 'in' : ''}" type="button" data-add="${p.id}" aria-label="${ic ? 'В корзине' : 'В корзину'}: ${p.name}">${ic ? icCheck : icPlus}<span class="add-t">${ic ? 'В корзине' : 'В корзину'}</span></button>
+          <div><div class="price">${p.old && p.price ? `<s>${rub(p.old)}</s>` : ''}${p.price ? rub(p.price) : '<span class="on-request">Цена по запросу</span>'}</div></div>
+          ${p.price ? `<button class="add ${ic ? 'in' : ''}" type="button" data-add="${p.id}" aria-label="${ic ? 'В корзине' : 'В корзину'}: ${p.name}">${ic ? icCheck : icPlus}<span class="add-t">${ic ? 'В корзине' : 'В корзину'}</span></button>`
+            : `<button class="add" type="button" data-ask="${p.id}" aria-label="Узнать цену: ${p.name}">${icPlus}<span class="add-t">Узнать цену</span></button>`}
         </div>
       </div></article>`;
   }).join('');
@@ -1718,6 +1721,8 @@ document.addEventListener('click', e => {
   if (fav) { toggleFav(+fav.dataset.fav, fav); return; }
   const cmp = e.target.closest('[data-cmp]');
   if (cmp) { toggleCmp(+cmp.dataset.cmp); return; }
+  const ask = e.target.closest('[data-ask]');
+  if (ask) { askPrice(+ask.dataset.ask); return; }
   const add = e.target.closest('[data-add]');
   if (add) { const id = +add.dataset.add; inCart(id) ? openCart() : addToCart(id, 1); return; }
   const open = e.target.closest('[data-open]');
@@ -1726,7 +1731,14 @@ document.addEventListener('click', e => {
 
 /* ============ КОРЗИНА ============ */
 function saveCart() { store.set('vms_cart', state.cart); renderCart(); renderGrid(); if (pStep >= QS.length) renderPicker(); }
+// «Цена по запросу»: вместо корзины открываем заказ звонка в чате
+function askPrice(id) {
+  closeAll(false);
+  if (window.chatOpen) chatOpen('callback', byId(id) && byId(id).name);
+  else location.href = 'tel:' + CONFIG.phone.replace(/[^\d+]/g, '');
+}
 function addToCart(id, qty) {
+  if (!byId(id).price) { askPrice(id); return; }
   const l = state.cart.find(x => x.id === id);
   if (l) l.qty += qty; else state.cart.push({ id, qty });
   saveCart();
@@ -1791,10 +1803,10 @@ function renderFav() {
   }
   $('#favBody').innerHTML = state.fav.map(id => { const p = byId(id), ic = inCart(id); return `<div class="line">
       <button class="line-art" type="button" data-open="${id}" aria-label="Подробнее: ${p.name}" style="border:0;padding:0;cursor:pointer">${art(p).replace(/<span class="no-photo">.*?<\/span>/, '')}</button>
-      <div><b>${p.name}</b><span class="card-cat">${catName(p)}</span><div class="lp">${rub(p.price)}</div>
+      <div><b>${p.name}</b><span class="card-cat">${catName(p)}</span><div class="lp">${priceText(p)}</div>
         <div class="line-ctrl"><button class="to-cart ${ic ? 'in' : ''}" type="button" data-fav-cart="${id}">${ic ? 'В корзине ✓' : 'В корзину'}</button>
         <button class="rm" type="button" data-fav-rm="${id}">Удалить</button></div></div></div>`; }).join('');
-  const notInCart = state.fav.filter(id => !inCart(id));
+  const notInCart = state.fav.filter(id => !inCart(id) && byId(id).price);
   $('#favFoot').innerHTML = notInCart.length
     ? `<div class="total"><span>${n} ${plural(n, 'товар', 'товара', 'товаров')}</span><b>${rub(state.fav.reduce((s, id) => s + byId(id).price, 0))}</b></div><span class="credit">Избранное сохранится, даже если вы закроете сайт</span><button class="btn btn-block" type="button" id="favAll">Добавить всё в корзину</button>`
     : `<button class="btn btn-block" type="button" id="favToCart">Перейти в корзину</button>`;
@@ -1844,10 +1856,10 @@ function renderCmp() {
   // строки: цена + объединение всех характеристик в порядке появления
   const keys = [];
   items.forEach(p => Object.keys(p.specs).forEach(k => { if (!keys.includes(k)) keys.push(k); }));
-  const minPrice = Math.min(...items.map(p => p.price));
+  const minPrice = Math.min(...items.filter(p => p.price).map(p => p.price));
   const rows = [
     { k: 'Категория', vals: items.map(p => catName(p)) },
-    { k: 'Цена', vals: items.map(p => rub(p.price)), price: true },
+    { k: 'Цена', vals: items.map(p => priceText(p)), price: true },
     ...keys.map(k => ({ k, vals: items.map(p => p.specs[k] || null) }))
   ].map(r => ({ ...r, diff: new Set(r.vals.map(v => v || '—')).size > 1 }));
   const shown = cmpOnlyDiff ? rows.filter(r => r.diff) : rows;
@@ -1858,10 +1870,10 @@ function renderCmp() {
       <thead><tr><th></th>${items.map(p => { const ic = inCart(p.id); return `<th><div class="cmp-col">
         <button class="rm-x" type="button" data-cmp="${p.id}" aria-label="Убрать из сравнения: ${p.name}">×</button>
         <button class="art" type="button" data-open="${p.id}" aria-label="Подробнее: ${p.name}">${art(p).replace(/<span class="no-photo">.*?<\/span>/, '')}</button>
-        <span class="card-cat">${catName(p)}</span><span class="name">${p.name}</span><span class="pr">${rub(p.price)}</span>
+        <span class="card-cat">${catName(p)}</span><span class="name">${p.name}</span><span class="pr">${priceText(p)}</span>
         <button class="btn ${ic ? 'in' : ''}" type="button" data-cmp-cart="${p.id}">${ic ? 'В корзине ✓' : 'В корзину'}</button>
       </div></th>`; }).join('')}${items.length < 2 ? '<th style="color:var(--muted);font-weight:500;font-size:14px">Добавьте ещё модель из каталога, чтобы увидеть разницу</th>' : ''}</tr></thead>
-      <tbody>${shown.map(r => `<tr class="${r.diff && items.length > 1 ? 'diff' : ''}"><th>${r.k}</th>${r.vals.map((v, i) => `<td class="${!v ? 'none' : ''} ${r.price && items.length > 1 && items[i].price === minPrice ? 'best' : ''}">${v || '—'}</td>`).join('')}${items.length < 2 ? '<td></td>' : ''}</tr>`).join('')}
+      <tbody>${shown.map(r => `<tr class="${r.diff && items.length > 1 ? 'diff' : ''}"><th>${r.k}</th>${r.vals.map((v, i) => `<td class="${!v ? 'none' : ''} ${r.price && items.length > 1 && items[i].price && items[i].price === minPrice ? 'best' : ''}">${v || '—'}</td>`).join('')}${items.length < 2 ? '<td></td>' : ''}</tr>`).join('')}
       ${cmpOnlyDiff && !shown.length ? `<tr><td colspan="${items.length + 1}" style="color:var(--muted);font-weight:500">Все характеристики совпадают</td></tr>` : ''}</tbody>
     </table></div>`;
   const d = $('#cmpDiff'); if (d) d.onchange = () => { cmpOnlyDiff = d.checked; renderCmp(); };
@@ -1908,7 +1920,7 @@ function openProduct(id) {
     <div class="pd-info">
       <span class="card-cat">${p.world === 'moto' ? 'Мотостиль' : 'Велостиль'} · ${catName(p)}</span>
       <h2>${p.name}</h2>
-      <div class="pd-price">${rub(p.price)}${p.old ? `<s>${rub(p.old)}</s>` : ''}</div>
+      <div class="pd-price">${priceText(p)}${p.old && p.price ? `<s>${rub(p.old)}</s>` : ''}</div>
       <span class="credit">Тест-драйв и самовывоз — Оренбург, ул. Ленинская, 57А</span>
       <p class="pd-desc">${p.desc}</p>
       <table class="spec-table"><tbody>${Object.entries(p.specs).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
@@ -1918,7 +1930,8 @@ function openProduct(id) {
     </div></div>`;
   $('#pdDec').onclick = () => { qty = Math.max(1, qty - 1); $('#pdQty').textContent = qty; };
   $('#pdInc').onclick = () => { qty++; $('#pdQty').textContent = qty; };
-  $('#pdAdd').onclick = () => { addToCart(p.id, qty); closeAll(); };
+  $('#pdAdd').onclick = () => { if (!p.price) return askPrice(p.id); addToCart(p.id, qty); closeAll(); };
+  if (!p.price) { $('#pdAdd').textContent = 'Узнать цену'; $('.pd-buy .qty').hidden = true; }
   openLayer($('#pModal'));
 }
 
@@ -2047,7 +2060,7 @@ function renderPicker() {
   const res = pickResults();
   $('#pMain').innerHTML = `<h3 class="q-title">Подходящие модели</h3><div class="results">${res.map(({ p, m }) => `
     <div class="res"><button class="res-art" type="button" data-open="${p.id}" aria-label="Подробнее: ${p.name}">${art(p).replace(/<span class="no-photo">.*?<\/span>/, '')}</button>
-      <div><span class="match">Совпадение ${m}%</span><b>${p.name}</b><span>${catName(p)}</span><span class="price">${rub(p.price)}</span></div>
+      <div><span class="match">Совпадение ${m}%</span><b>${p.name}</b><span>${catName(p)}</span><span class="price">${priceText(p)}</span></div>
       <button class="btn btn-sm" type="button" data-add="${p.id}">${inCart(p.id) ? 'В корзине' : 'В корзину'}</button></div>`).join('')}</div>
     <div class="picker-nav"><button class="link-btn" type="button" id="pAgain">Пройти заново</button><button class="link-btn" type="button" id="pAll">Смотреть весь каталог</button></div>`;
   $('#pAgain').onclick = () => { pStep = 0; pAns = {}; renderPicker(); };
@@ -2113,7 +2126,7 @@ function heroSlide(i, first) {
   fitHeroName();
   swap($('#hxText'), s.text);
   swap($('#hxSpecs'), Object.entries(p.specs).slice(0, 3).map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join(''));
-  swap($('#hxPrice'), `${p.old ? `<s>${rub(p.old)}</s>` : ''}${rub(p.price)}`);
+  swap($('#hxPrice'), `${p.old && p.price ? `<s>${rub(p.old)}</s>` : ''}${priceText(p)}`);
   $('#hxNum').textContent = String(hxI + 1).padStart(2, '0');
   $('#hxGlow').style.backgroundColor = s.glow;
   const bar = $('#hxBar'); bar.classList.remove('run'); void bar.offsetWidth; bar.classList.add('run');
@@ -2487,7 +2500,8 @@ function initChat() {
       const msg = !ok.name ? 'Укажите имя.' : !ok.phone ? 'Укажите телефон полностью — 11 цифр.' : !ok.city ? 'Укажите город.' : !ok.agree ? 'Отметьте согласие на обработку персональных данных — без него мы не можем принять контакты.' : '';
       f.querySelector('.lead-err').textContent = msg;
       if (msg) { (f[['name', 'phone', 'city'].find(k => !ok[k])] || f.agree).focus(); return; }
-      const lead = { type: cb ? 'callback' : 'lead', name: f.name.value.trim(), phone: f.phone.value, city: f.city.value.trim(), consent: true, consentAt: new Date().toISOString(), page: location.href };
+      const lead = { type: cb ? 'callback' : 'lead', name: f.name.value.trim(), phone: f.phone.value, city: f.city.value.trim(), consent: true, consentAt: new Date().toISOString(), page: location.href,
+        text: cb && askProduct ? 'Узнать цену: ' + askProduct : '' };
       const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Отправляем…';
       sendLead(lead).then(sent => {
         lead.sent = sent; ss.set('chat_lead', JSON.stringify(lead));
@@ -2511,7 +2525,8 @@ function initChat() {
     if (!quiet) setTimeout(() => f.name.focus({ preventScroll: true }), 50);
   };
 
-  let started = false, quiet = false;
+  let started = false, quiet = false, askProduct = '';
+  window.chatOpen = (mode, product) => open(mode, product);
   const start = () => {
     if (started) return; started = true;
     const lead = getLead();
@@ -2523,14 +2538,16 @@ function initChat() {
     say(`Здравствуйте! Я ${mgrName ? esc(mgrName) + ', менеджер' : 'менеджер'} Мотостиль и Велостиль. Помогу подобрать технику под вашу дорогу и бюджет — от городского самоката до эндуро для бездорожья. Оставьте контакты, и начнём:`)
       .then(showLeadForm);
   };
-  const open = (mode = 'chat') => {
+  const open = (mode = 'chat', product = '') => {
     hideMenu();
     chat.classList.add('open'); chat.classList.remove('peek', 'has-new');
     $('#chatWin').setAttribute('aria-hidden', 'false'); $('#chatFab').setAttribute('aria-expanded', 'true');
     ss.set('chat_seen', '1');
     if (mode === 'callback') {
-      started = true;
-      if (!body.querySelector('.chat-lead')) say('Оставьте номер — перезвоним и ответим на все вопросы. Это бесплатно.').then(() => showLeadForm('callback'));
+      started = true; askProduct = product || '';
+      if (!body.querySelector('.chat-lead')) say(product
+        ? `Цену на ${esc(product)} подскажет менеджер. Оставьте номер — перезвоним, назовём цену и срок поставки.`
+        : 'Оставьте номер — перезвоним и ответим на все вопросы. Это бесплатно.').then(() => showLeadForm('callback'));
       return;
     }
     start();
