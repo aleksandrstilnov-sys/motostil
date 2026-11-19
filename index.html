@@ -426,11 +426,44 @@ footer { background: #0E0F11; color: #8E939B; padding: 64px 0 28px; position: re
 .modal-box { position: relative; background: var(--bg); color: var(--text); border-radius: var(--r-md); width: min(1040px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; transform: translateY(16px) scale(.98); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
 .modal.open .modal-box { transform: none; }
 .modal-box .x { position: absolute; top: 16px; right: 16px; z-index: 2; }
-.pd { display: grid; grid-template-columns: 1.15fr 1fr; }
-.pd-art { background: var(--art-bg); min-height: 440px; display: grid; place-items: center; overflow: hidden; }
-.pd-art img { width: 100%; height: 100%; object-fit: cover; }
-.pd-art svg { width: 100%; padding: 30px; }
-.pd-info { padding: 40px 36px 36px; display: flex; flex-direction: column; gap: 16px; }
+#pModal .modal-box { width: min(1180px, 100%); }
+.pd { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; }
+.pd-gal, .pd-info { min-width: 0; }   /* ряд миниатюр не должен раздвигать колонку шире экрана */
+@media (max-width: 960px) { .pd { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) {
+  .pd-buy { flex-wrap: wrap; }
+  .pd-buy .btn { flex: 1 1 100%; order: -1; }        /* кнопка — отдельной строкой во всю ширину */
+  .pd-buy .qty { margin-right: auto; }
+  .pd-info h2 { font-size: 28px; overflow-wrap: anywhere; }
+  .pd-price { font-size: 28px; }
+}
+/* галерея: фото целиком (не обрезаем), остаётся на месте при прокрутке характеристик */
+.pd-gal { position: sticky; top: 0; padding: 20px; display: grid; gap: 12px; }
+.g-main { position: relative; aspect-ratio: 4 / 3; border-radius: var(--r-md); overflow: hidden; background: var(--art-bg); touch-action: pan-y; user-select: none; cursor: grab; transition: background-color .4s; }
+.g-main:active { cursor: grabbing; }
+.g-main.g-empty { display: grid; place-items: center; cursor: default; }
+.g-main.g-empty svg { width: 100%; padding: 30px; }
+.g-track { display: flex; height: 100%; transition: transform .45s var(--ease); }
+.g-slide { flex: 0 0 100%; height: 100%; display: grid; place-items: center; }
+.g-slide img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.g-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 50%; border: 0; background: rgba(20,21,24,.6); color: #fff; font-size: 28px; line-height: 1; display: grid; place-items: center; padding-bottom: 4px; opacity: 0; transition: opacity .25s, background-color .2s; backdrop-filter: blur(6px); }
+.g-main:hover .g-nav, .g-nav:focus-visible { opacity: 1; }
+.g-nav:hover { background: var(--orange); color: var(--black); }
+.g-prev { left: 12px; } .g-next { right: 12px; }
+.g-count { position: absolute; right: 12px; bottom: 12px; background: rgba(20,21,24,.6); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; backdrop-filter: blur(6px); }
+.g-thumbs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+.g-thumb { flex: 0 0 84px; height: 63px; border-radius: 8px; overflow: hidden; border: 0; padding: 0; background: var(--surface-2); opacity: .55; box-shadow: inset 0 0 0 2px transparent; transition: opacity .2s, box-shadow .2s; }
+.g-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.g-thumb:hover { opacity: .85; }
+.g-thumb.on { opacity: 1; box-shadow: 0 0 0 2px var(--orange); }
+.pd-info { padding: 36px 36px 36px 16px; display: flex; flex-direction: column; gap: 16px; }
+.pd-order { color: var(--orange); }
+.pd-block { border-top: 1px solid var(--line); padding-top: 16px; }
+.pd-block h3 { font-family: var(--display); text-transform: uppercase; font-size: 18px; letter-spacing: .02em; margin: 0 0 8px; }
+.pd-desc p { margin: 0 0 10px; color: var(--muted); line-height: 1.6; }
+.pd-more { border: 0; background: none; color: var(--orange); font-weight: 700; font-size: 14px; padding: 8px 0 0; }
+.pd-more:hover { text-decoration: underline; }
+@media (max-width: 960px) { .pd-gal { position: static; padding: 14px 14px 0; } .pd-info { padding: 20px; } .g-nav { opacity: 1; width: 40px; height: 40px; } }
 .pd-info h2 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1.08; letter-spacing: -.02em; margin: 0; padding-right: 40px; }
 .pd-price { font-family: var(--display); font-weight: 800; font-size: 32px; letter-spacing: -.02em; }
 .pd-price s { font-family: var(--body); font-size: 16px; font-weight: 600; color: var(--muted); margin-left: 10px; letter-spacing: 0; }
@@ -1913,27 +1946,98 @@ document.addEventListener('click', e => { if (e.target.closest('[data-close]')) 
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
 const xBtn = '<button class="x" type="button" data-close aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
 
+const escHtml = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const SPECS_SHORT = 8;
+
 function openProduct(id) {
   const p = byId(id); let qty = 1; closeAll(false);
+  const photos = (p.photos && p.photos.length ? p.photos : (p.img ? [p.img] : []));
+  const specs = Object.entries(p.specs || {});
+  const paras = String(p.desc || '').split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+  const gallery = photos.length
+    ? `<div class="g-main" tabindex="0" aria-roledescription="галерея" aria-label="Фото ${escHtml(p.name)}">
+         <div class="g-track">${photos.map((u, i) => `<div class="g-slide"><img src="${escHtml(u)}" alt="${escHtml(p.name)} — фото ${i + 1}" ${i ? 'loading="lazy"' : ''} draggable="false"></div>`).join('')}</div>
+         ${photos.length > 1 ? `<button class="g-nav g-prev" type="button" aria-label="Предыдущее фото">‹</button><button class="g-nav g-next" type="button" aria-label="Следующее фото">›</button><span class="g-count"><b>1</b> / ${photos.length}</span>` : ''}
+       </div>
+       ${photos.length > 1 ? `<div class="g-thumbs">${photos.map((u, i) => `<button type="button" class="g-thumb ${i ? '' : 'on'}" data-i="${i}" aria-label="Фото ${i + 1}"><img src="${escHtml(u)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}`
+    : `<div class="g-main g-empty">${art(p).replace(/<span class="no-photo">.*?<\/span>/, '')}</div>`;
   $('#pBox').innerHTML = `${xBtn}<div class="pd">
-    <div class="pd-art">${art(p).replace(/<span class="no-photo">.*?<\/span>/, '')}</div>
+    <div class="pd-gal">${gallery}</div>
     <div class="pd-info">
-      <span class="card-cat">${p.world === 'moto' ? 'Мотостиль' : 'Велостиль'} · ${catName(p)}</span>
-      <h2>${p.name}</h2>
+      <span class="card-cat">${p.world === 'moto' ? 'Мотостиль' : 'Велостиль'} · ${catName(p)}${p.stock === 'order' ? ' · <b class="pd-order">под заказ</b>' : ''}</span>
+      <h2>${escHtml(p.name)}</h2>
       <div class="pd-price">${priceText(p)}${p.old && p.price ? `<s>${rub(p.old)}</s>` : ''}</div>
-      <span class="credit">Тест-драйв и самовывоз — Оренбург, ул. Ленинская, 57А</span>
-      <p class="pd-desc">${p.desc}</p>
-      <table class="spec-table"><tbody>${Object.entries(p.specs).map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
       <div class="pd-buy"><div class="qty"><button type="button" id="pdDec" aria-label="Уменьшить">−</button><span id="pdQty">1</span><button type="button" id="pdInc" aria-label="Увеличить">+</button></div>
         <button class="btn" type="button" id="pdAdd">Добавить в корзину</button>${favBtn(p)}${cmpBtn(p)}</div>
-      <div class="pd-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>${p.stock === 'order' ? 'Под заказ — срок поставки уточнит менеджер' : 'В наличии'} · сборка и предпродажная подготовка бесплатно</div>
+      <div class="pd-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>${p.stock === 'order' ? 'Под заказ — срок поставки уточнит менеджер' : 'В наличии'} · сборка и предпродажная подготовка бесплатно<br>Тест-драйв и самовывоз — Оренбург, ул. Ленинская, 57А</span></div>
+      ${specs.length ? `<div class="pd-block"><h3>Характеристики</h3>
+        <table class="spec-table"><tbody>${specs.map(([k, v], i) => `<tr${i >= SPECS_SHORT ? ' class="more" hidden' : ''}><td>${escHtml(k)}</td><td>${escHtml(v)}</td></tr>`).join('')}</tbody></table>
+        ${specs.length > SPECS_SHORT ? `<button class="pd-more" type="button" data-more="specs">Все характеристики (${specs.length})</button>` : ''}</div>` : ''}
+      ${paras.length ? `<div class="pd-block"><h3>Описание</h3>
+        <div class="pd-desc">${paras.map((t, i) => `<p${i ? ' class="more" hidden' : ''}>${escHtml(t)}</p>`).join('')}</div>
+        ${paras.length > 1 ? `<button class="pd-more" type="button" data-more="desc">Читать полностью</button>` : ''}</div>` : ''}
     </div></div>`;
   $('#pdDec').onclick = () => { qty = Math.max(1, qty - 1); $('#pdQty').textContent = qty; };
   $('#pdInc').onclick = () => { qty++; $('#pdQty').textContent = qty; };
   $('#pdAdd').onclick = () => { if (!p.price) return askPrice(p.id); addToCart(p.id, qty); closeAll(); };
   if (!p.price) { $('#pdAdd').textContent = 'Узнать цену'; $('.pd-buy .qty').hidden = true; }
+  // «Все характеристики» / «Читать полностью»
+  $$('#pBox [data-more]').forEach(b => b.onclick = () => {
+    // метка «развёрнуто» — aria-expanded (не data-open: data-open у нас открывает товар)
+    const box = b.closest('.pd-block'), open = b.getAttribute('aria-expanded') !== 'true';
+    box.querySelectorAll('.more').forEach(el => el.hidden = !open);
+    b.setAttribute('aria-expanded', open);
+    b.textContent = b.dataset.more === 'specs' ? (open ? 'Свернуть' : `Все характеристики (${specs.length})`) : (open ? 'Свернуть' : 'Читать полностью');
+  });
+  initGallery($('#pBox .pd-gal'), photos.length);
   openLayer($('#pModal'));
 }
+
+/* Галерея товара: стрелки, миниатюры, свайп, клавиши ← →.
+   Фон подстраивается под края фото (белый фон BIZON — белая подложка, тёмный салон — тёмная). */
+function initGallery(root, n) {
+  if (!root || n < 1) return;
+  const main = root.querySelector('.g-main'), track = root.querySelector('.g-track');
+  if (!track) return;
+  let i = 0;
+  const go = k => {
+    i = (k + n) % n;
+    track.style.transform = `translateX(${-i * 100}%)`;
+    const c = root.querySelector('.g-count b'); if (c) c.textContent = i + 1;
+    root.querySelectorAll('.g-thumb').forEach((t, j) => t.classList.toggle('on', j === i));
+    const th = root.querySelector('.g-thumb.on'); if (th) th.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    tint(track.children[i].querySelector('img'));
+  };
+  const tint = img => {
+    const apply = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = c.height = 4;
+        const x = c.getContext('2d'); x.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight * .1, 0, 0, 4, 4);
+        const d = x.getImageData(0, 0, 4, 1).data; let r = 0, g = 0, b = 0;
+        for (let k = 0; k < d.length; k += 4) { r += d[k]; g += d[k + 1]; b += d[k + 2]; }
+        main.style.backgroundColor = `rgb(${r / 4 | 0},${g / 4 | 0},${b / 4 | 0})`;
+      } catch (e) { /* фото с другого адреса — оставляем фон по умолчанию */ }
+    };
+    if (img.complete && img.naturalWidth) apply(); else img.addEventListener('load', apply, { once: true });
+  };
+  tint(track.querySelector('img'));
+  if (n < 2) return;
+  root.querySelector('.g-prev').onclick = () => go(i - 1);
+  root.querySelector('.g-next').onclick = () => go(i + 1);
+  root.querySelectorAll('.g-thumb').forEach(t => t.onclick = () => go(+t.dataset.i));
+  // свайп пальцем или мышью
+  let x0 = null, dx = 0;
+  main.addEventListener('pointerdown', e => { if (e.target.closest('.g-nav')) return; x0 = e.clientX; dx = 0; track.style.transition = 'none'; });
+  main.addEventListener('pointermove', e => { if (x0 === null) return; dx = e.clientX - x0; track.style.transform = `translateX(calc(${-i * 100}% + ${dx}px))`; });
+  const end = () => { if (x0 === null) return; track.style.transition = ''; const w = main.clientWidth; x0 = null; if (Math.abs(dx) > w * .15) go(i + (dx < 0 ? 1 : -1)); else go(i); };
+  main.addEventListener('pointerup', end); main.addEventListener('pointerleave', end); main.addEventListener('pointercancel', end);
+}
+document.addEventListener('keydown', e => {
+  if (!$('#pModal').classList.contains('open') || (e.target.closest && e.target.closest('input, textarea'))) return;
+  const g = $('#pBox .pd-gal'); if (!g || !g.querySelector('.g-next')) return;
+  if (e.key === 'ArrowRight') g.querySelector('.g-next').click();
+  if (e.key === 'ArrowLeft') g.querySelector('.g-prev').click();
+});
 
 /* ============ ОФОРМЛЕНИЕ ============ */
 function openCheckout() {
