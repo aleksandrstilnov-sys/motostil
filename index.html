@@ -1622,7 +1622,7 @@ function art(p) {
    img — путь к фото, world: moto | velo, who: adult | teen | kid, where: city | offroad | road
    ========================================================= */
 const CATS = {
-  moto: [ { id: 'enduro', name: 'Эндуро' }, { id: 'pit', name: 'Питбайки' }, { id: 'moto', name: 'Мотоциклы' }, { id: 'scooter', name: 'Скутеры' }, { id: 'atv', name: 'Квадроциклы' } ],
+  moto: [ { id: 'enduro', name: 'Эндуро' }, { id: 'pit', name: 'Питбайки' }, { id: 'moto', name: 'Мотоциклы' }, { id: 'scooter', name: 'Скутеры' }, { id: 'atv', name: 'Квадроциклы' }, { id: 'snow', name: 'Снегоходы' }, { id: 'tow', name: 'Мотобуксировщики' } ],
   velo: [ { id: 'mtb', name: 'Горные' }, { id: 'city', name: 'Городские' }, { id: 'ebike', name: 'Электровелосипеды' }, { id: 'kick', name: 'Электросамокаты' }, { id: 'kids', name: 'Детские' } ]
 };
 const P = [
@@ -2384,7 +2384,7 @@ function initHero() {
 
 /* ============ ЛЕНТЫ ============ */
 function initTapes() {
-  const a = ['Эндуро', 'Питбайки', 'Квадроциклы', 'Скутеры', 'Мотоциклы', 'Электровелосипеды', 'Самокаты', 'Велосипеды'];
+  const a = ['Эндуро', 'Питбайки', 'Квадроциклы', 'Снегоходы', 'Скутеры', 'Мотоциклы', 'Мотобуксировщики', 'Электровелосипеды', 'Самокаты', 'Велосипеды'];
   const b = ['Оренбург', 'Ленинская, 57А', 'Тест-драйв', 'Свой сервис', 'Гарантия', 'Доставка по России'];
   const row = list => { const one = list.map(t => `<span>${t}</span><i></i>`).join(''); return one + one + one + one; };
   $('#tapeA').innerHTML = row(a); $('#tapeB').innerHTML = row(b);
