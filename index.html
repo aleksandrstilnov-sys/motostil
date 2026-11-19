@@ -492,9 +492,9 @@ footer { background: #0E0F11; color: #8E939B; padding: 64px 0 28px; position: re
 .spec-table td { padding: 9px 0; border-bottom: 1px solid var(--line); }
 .spec-table td:last-child { text-align: right; font-weight: 700; }
 .spec-table td:first-child { color: var(--muted); }
-.pd-buy { display: flex; gap: 12px; align-items: center; margin-top: 6px; }
+.pd-buy { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 6px; }
 .pd-buy .qty button { width: 44px; height: 50px; }
-.pd-buy .btn { flex: 1; }
+.pd-buy .btn { flex: 1 1 200px; min-width: 0; }
 .pd-note { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
 .pd-note svg { width: 18px; height: 18px; color: var(--ok); flex: none; }
 
