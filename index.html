@@ -431,9 +431,9 @@ footer { background: #0E0F11; color: #8E939B; padding: 64px 0 28px; position: re
 .pd-gal, .pd-info { min-width: 0; }   /* ряд миниатюр не должен раздвигать колонку шире экрана */
 @media (max-width: 960px) { .pd { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) {
-  .pd-buy { flex-wrap: wrap; }
-  .pd-buy .btn { flex: 1 1 100%; order: -1; }        /* кнопка — отдельной строкой во всю ширину */
-  .pd-buy .qty { margin-right: auto; }
+  .pd .pd-buy { flex-wrap: wrap; }
+  .pd .pd-buy .btn { flex: 1 1 100%; order: -1; }        /* кнопка — отдельной строкой во всю ширину */
+  .pd .pd-buy .qty { margin-right: auto; }
   .pd-info h2 { font-size: 28px; overflow-wrap: anywhere; }
   .pd-price { font-size: 28px; }
 }
@@ -445,8 +445,8 @@ footer { background: #0E0F11; color: #8E939B; padding: 64px 0 28px; position: re
 .g-main.g-empty { display: grid; place-items: center; cursor: default; }
 .g-main.g-empty svg { width: 100%; padding: 30px; }
 .g-track { display: flex; height: 100%; transition: transform .45s var(--ease); }
-.g-slide { flex: 0 0 100%; height: 100%; display: grid; place-items: center; }
-.g-slide img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.g-slide { flex: 0 0 100%; height: 100%; min-height: 0; overflow: hidden; }
+.g-slide img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 .g-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 50%; border: 0; background: rgba(20,21,24,.6); color: #fff; font-size: 28px; line-height: 1; display: grid; place-items: center; padding-bottom: 4px; opacity: 0; transition: opacity .25s, background-color .2s; backdrop-filter: blur(6px); }
 .g-main:hover .g-nav, .g-nav:focus-visible { opacity: 1; }
 .g-nav:hover { background: var(--orange); color: var(--black); }
@@ -492,9 +492,9 @@ footer { background: #0E0F11; color: #8E939B; padding: 64px 0 28px; position: re
 .spec-table td { padding: 9px 0; border-bottom: 1px solid var(--line); }
 .spec-table td:last-child { text-align: right; font-weight: 700; }
 .spec-table td:first-child { color: var(--muted); }
-.pd-buy { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 6px; }
+.pd-buy { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
 .pd-buy .qty button { width: 44px; height: 50px; }
-.pd-buy .btn { flex: 1 1 200px; min-width: 0; }
+.pd-buy .btn { flex: 1 1 0; min-width: 0; padding-inline: 14px; white-space: normal; line-height: 1.15; }
 .pd-note { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
 .pd-note svg { width: 18px; height: 18px; color: var(--ok); flex: none; }
 
